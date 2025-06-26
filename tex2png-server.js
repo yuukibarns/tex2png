@@ -43,36 +43,55 @@ function startServer() {
 
   // Initialize MathJax and start server
   require("mathjax").init({
-    loader: { load: ["input/tex-base", "[tex]/ams", "[tex]/mathtools", "output/svg"] },
+    loader: {
+      load: [
+        "input/tex-base",
+        "[tex]/configmacros",
+        "[tex]/ams",
+        "[tex]/mathtools",
+        "[tex]/boldsymbol",
+        "output/svg",
+      ],
+    },
     tex: {
-      packages: ["base", "ams", "mathtools"],
+      packages: ["base", "configmacros", "ams", "mathtools", "boldsymbol"],
+      macros: {
+        bm: ["\\boldsymbol{#1}", 1],
+      },
     },
   }).then(async (MathJax) => {
     console.log("MathJax initialized, starting server...");
-    
+
     // Add status endpoint
     app.get("/status", (req, res) => {
       res.status(200).send("OK");
     });
-    
+
     app.post("/render", async (req, res) => {
       try {
-        const { inputFile, outFile = "output.png", color = defaultColor, fontSize = defaultFontSize } = req.body;
-        
+        const {
+          inputFile,
+          outFile = "output.png",
+          color = defaultColor,
+          fontSize = defaultFontSize,
+        } = req.body;
+
         if (!inputFile) {
           return res.status(400).json({ error: "inputFile is required" });
         }
-        
+
         // Read content from file
         let content;
         try {
           content = fs.readFileSync(inputFile, "utf8").trim();
         } catch (err) {
-          return res.status(400).json({ error: `Error reading input file: ${err.message}` });
+          return res.status(400).json({
+            error: `Error reading input file: ${err.message}`,
+          });
         }
-        
+
         const { content: mathContent, display } = processMathContent(content);
-        
+
         // Convert to SVG
         const svg = MathJax.tex2svg(mathContent, { display });
         const innerSVG = MathJax.startup.adaptor.firstChild(svg);
@@ -163,7 +182,9 @@ function processMathContent(content) {
       cleanedContent = content.slice(2, -2).trim();
     }
   } else {
-    console.log("No recognized math delimiters found, treating as display math");
+    console.log(
+      "No recognized math delimiters found, treating as display math",
+    );
     displayMode = true;
   }
 
