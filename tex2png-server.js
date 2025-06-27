@@ -9,17 +9,28 @@ const bodyParser = require("body-parser");
 const app = express();
 app.use(bodyParser.json());
 
+// Get command-line arguments
+const args = process.argv.slice(2);
+
 // Default settings
 const defaultColor = "#8ec07c";
 const defaultFontSize = 30;
 const PID_FILE = path.join(__dirname, "tex2png-server.pid");
 const PORT = 3000;
 
+// Default macros
+const defaultMacros = {
+  // HACK(yuukibarns): MathJax's limits
+  bm: ["\\boldsymbol{#1}", 1],
+  tag: ["\\qquad (\\mathrm{#1})", 1],
+};
+
 // Command handling
-const command = process.argv[2];
+const command = args[0];
 
 if (command === "start") {
-  startServer();
+  if (args.length >= 2) startServer(args[1]);
+  else startServer();
 } else if (command === "stop") {
   stopServer();
 } else {
@@ -27,7 +38,7 @@ if (command === "start") {
   process.exit(1);
 }
 
-function startServer() {
+function startServer(macrosFile) {
   // Check if already running
   if (fs.existsSync(PID_FILE)) {
     const pid = parseInt(fs.readFileSync(PID_FILE, "utf8"));
@@ -38,6 +49,21 @@ function startServer() {
     } catch (e) {
       // Process not running, continue
       fs.unlinkSync(PID_FILE);
+    }
+  }
+
+  // Load macros if specified
+  let customMacros;
+  if (macrosFile) {
+    try {
+      if (!fs.existsSync(macrosFile)) {
+        console.error(`Macros file not found: ${macrosFile}`);
+        process.exit(1);
+      }
+      customMacros = JSON.parse(fs.readFileSync(macrosFile, "utf8"));
+    } catch (err) {
+      console.error(`Error loading macros file: ${err.message}`);
+      process.exit(1);
     }
   }
 
@@ -55,41 +81,7 @@ function startServer() {
     },
     tex: {
       packages: ["base", "configmacros", "ams", "mathtools", "boldsymbol"],
-      macros: {
-        // HACK(yuukibarns): MathJax's limits
-        bm: ["\\boldsymbol{#1}", 1],
-        tag: ['\\qquad (\\mathrm{#1})', 1],
-        // Algebra
-        Hom: "\\operatorname{Hom}",
-        End: "\\operatorname{End}",
-        Aut: "\\operatorname{Aut}",
-        ker: "\\operatorname{ker}",
-        im: "\\operatorname{im}",
-        rank: "\\operatorname{rank}",
-        tr: "\\operatorname{tr}",
-        Spec: "\\operatorname{Spec}",
-        // Analysis
-        Re: "\\operatorname{Re}",
-        Im: "\\operatorname{Im}",
-        Res: "\\operatorname{Res}",
-        sgn: "\\operatorname{sgn}",
-        supp: "\\operatorname{supp}",
-        argmax: "\\operatorname{argmax}",
-        argmin: "\\operatorname{argmin}",
-        // Probability
-        E: "\\mathbb{E}",
-        Var: "\\operatorname{Var}",
-        Cov: "\\operatorname{Cov}",
-        // Geometry
-        diam: "\\operatorname{diam}",
-        Vol: "\\operatorname{Vol}",
-        grad: "\\operatorname{grad}",
-        curl: "\\operatorname{curl}",
-        div: "\\operatorname{div}",
-        // Number Theory
-        ord: "\\operatorname{ord}",
-        lcm: "\\operatorname{lcm}",
-      },
+      macros: { ...defaultMacros, ...customMacros }, // Start with default macros
     },
   }).then(async (MathJax) => {
     console.log("MathJax initialized, starting server...");

@@ -9,9 +9,9 @@ const { spawn } = require("child_process");
 const args = process.argv.slice(2);
 if (args.length === 0 || args[0] === "help") {
   console.log(`Usage:
-  tex2png stop                                 - Stop the server
-  tex2png <input> [output] [color] [fontSize]  - Render formula
-  tex2png help                                 - Show this help`);
+  tex2png stop                                          - Stop the server
+  tex2png <input> [output] [color] [fontSize] [macros]  - Render formula
+  tex2png help                                          - Show this help`);
   process.exit(0);
 }
 
@@ -41,25 +41,34 @@ function checkServerRunning() {
   });
 }
 
-function startServer() {
+function startServer(macrosFile) {
+  console.log(macrosFile);
   return new Promise((resolve, reject) => {
-    const server = spawn("node", [
-      path.join(__dirname, "tex2png-server.js"),
-      "start",
-    ], {
-      detached: true,
-      stdio: "ignore",
-    });
+    let server;
+    const args = [path.join(__dirname, "tex2png-server.js"), "start"];
+    if (macrosFile) args.push(macrosFile);
 
-    server.unref();
-    server.on("error", reject);
-
-    setTimeout(() => {
-      checkServerRunning().then((isRunning) => {
-        if (isRunning) resolve();
-        else reject(new Error("Failed to start server"));
+    try {
+      server = spawn("node", args, {
+        detached: true,
+        stdio: "ignore",
       });
-    }, 1000);
+
+      server.unref();
+      server.on("error", reject);
+
+      setTimeout(() => {
+        checkServerRunning().then((isRunning) => {
+          if (isRunning) resolve();
+          else {
+            server.kill(); // Clean up if failed
+            reject(new Error("Failed to start server"));
+          }
+        }).catch(reject);
+      }, 1000);
+    } catch (err) {
+      reject(err);
+    }
   });
 }
 
@@ -80,10 +89,19 @@ if (command === "stop") {
 } else {
   // Handle render command
   (async () => {
-    const inputFile = path.resolve(args[0]);
-    const outFile = args[1] || "output.png";
-    const color = args[2] || "#8ec07c";
-    const fontSize = args[3] || 30;
+    // Parse arguments with optional parameters
+    let inputFile, outFile, color, fontSize, macrosFile;
+
+    if (args.length >= 1) inputFile = path.resolve(args[0]);
+    if (args.length >= 2) outFile = args[1];
+    if (args.length >= 3) color = args[2];
+    if (args.length >= 4) fontSize = args[3];
+    if (args.length >= 5) macrosFile = path.resolve(args[4]);
+
+    // Set defaults for optional parameters
+    outFile = outFile || "output.png";
+    color = color || "#8ec07c";
+    fontSize = fontSize || 25;
 
     // Verify input file exists
     if (!fs.existsSync(inputFile)) {
@@ -96,20 +114,26 @@ if (command === "stop") {
     if (!isRunning) {
       try {
         console.log("Starting server...");
-        await startServer();
+        if (macrosFile) {
+          await startServer(macrosFile);
+        } else {
+          await startServer();
+        }
       } catch (err) {
         console.error("Failed to start server:", err.message);
         process.exit(1);
       }
     }
 
-    // Prepare request data
-    const postData = JSON.stringify({
+    // Prepare request data (only include macros if specified)
+    const requestData = {
       inputFile: inputFile,
       outFile: outFile,
       color: color,
       fontSize: fontSize,
-    });
+    };
+
+    const postData = JSON.stringify(requestData);
 
     // Send request to server
     const options = {
