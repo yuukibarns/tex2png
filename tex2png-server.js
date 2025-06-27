@@ -56,7 +56,39 @@ function startServer() {
     tex: {
       packages: ["base", "configmacros", "ams", "mathtools", "boldsymbol"],
       macros: {
+        // HACK(yuukibarns): MathJax's limits
         bm: ["\\boldsymbol{#1}", 1],
+        tag: ['\\qquad (\\mathrm{#1})', 1],
+        // Algebra
+        Hom: "\\operatorname{Hom}",
+        End: "\\operatorname{End}",
+        Aut: "\\operatorname{Aut}",
+        ker: "\\operatorname{ker}",
+        im: "\\operatorname{im}",
+        rank: "\\operatorname{rank}",
+        tr: "\\operatorname{tr}",
+        Spec: "\\operatorname{Spec}",
+        // Analysis
+        Re: "\\operatorname{Re}",
+        Im: "\\operatorname{Im}",
+        Res: "\\operatorname{Res}",
+        sgn: "\\operatorname{sgn}",
+        supp: "\\operatorname{supp}",
+        argmax: "\\operatorname{argmax}",
+        argmin: "\\operatorname{argmin}",
+        // Probability
+        E: "\\mathbb{E}",
+        Var: "\\operatorname{Var}",
+        Cov: "\\operatorname{Cov}",
+        // Geometry
+        diam: "\\operatorname{diam}",
+        Vol: "\\operatorname{Vol}",
+        grad: "\\operatorname{grad}",
+        curl: "\\operatorname{curl}",
+        div: "\\operatorname{div}",
+        // Number Theory
+        ord: "\\operatorname{ord}",
+        lcm: "\\operatorname{lcm}",
       },
     },
   }).then(async (MathJax) => {
