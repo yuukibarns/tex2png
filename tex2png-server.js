@@ -72,6 +72,7 @@ function startServer(macrosFile) {
     loader: {
       load: [
         "input/tex-base",
+        "[tex]/noundefined",
         "[tex]/configmacros",
         "[tex]/ams",
         "[tex]/mathtools",
@@ -80,7 +81,14 @@ function startServer(macrosFile) {
       ],
     },
     tex: {
-      packages: ["base", "configmacros", "ams", "mathtools", "boldsymbol"],
+      packages: [
+        "base",
+        "noundefined",
+        "configmacros",
+        "ams",
+        "mathtools",
+        "boldsymbol",
+      ],
       macros: { ...defaultMacros, ...customMacros }, // Start with default macros
     },
   }).then(async (MathJax) => {

@@ -42,7 +42,6 @@ function checkServerRunning() {
 }
 
 function startServer(macrosFile) {
-  console.log(macrosFile);
   return new Promise((resolve, reject) => {
     let server;
     const args = [path.join(__dirname, "tex2png-server.js"), "start"];
